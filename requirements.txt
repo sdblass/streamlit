@@ -1,0 +1,4 @@
+pandas
+numpy
+chart_studio
+haversine
