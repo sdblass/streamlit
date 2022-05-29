@@ -81,7 +81,7 @@ with st.form(key='user_info'):
     apt_types = [apt.replace('Studio', 'studio').replace('One bedroom', '1_br').replace('Two bedrooms', '2_br') for apt in apt_types]  
     
     st.write('''
-        Note, you must click "Submit" to update the map.
+        Note, you must click "Submit" to create/update the map.
     ''')
 
     with open('mapbox_key.txt') as f:
@@ -209,6 +209,17 @@ if submit_button:
     # fig.show()
     st.plotly_chart(fig)
 
+    st.write('''
+    ## Observations
+    Note how the average color of the listings becomes more yellow as distance increases from the target location (the star). This can be seen more easily by zooming out. This is because the adjusted rent increases as commuting time increases.
+
+    ## Future work
+    * Integrate an isochrone polygon into the map.
+    * Write a function that indicates if a point is within the polygon.
+    * Layer the isochrones for different commute times.
+    
+    
+    ''')
 
 
 
