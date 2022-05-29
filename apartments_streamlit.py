@@ -47,10 +47,10 @@ st.write(
 ''')
 
 with st.form(key='user_info'):
-    street = st.text_input('Street', max_chars=100)
-    city = st.text_input('City', max_chars=100)
-    state = st.text_input('State', max_chars=100)
-    zipcode = st.text_input('Zip', max_chars=100)
+    street = st.text_input('Street', max_chars=100, value='932 N Kenmore St')
+    city = st.text_input('City', max_chars=100, value='Arlington')
+    state = st.text_input('State', max_chars=100, value='VA')
+    zipcode = st.text_input('Zip', max_chars=100, value='22201')
 
     address = street + ' ' + city + ' ' + state + ' ' + zipcode
 
@@ -145,7 +145,8 @@ if submit_button:
         except IndexError:
             print('Check your address again for typos. The address must be within the immediate DC/MD/VA area.')
             return
-        location = requests.get(url)
+        session = requests.session()
+        location = session.get(url)
         return location.json()['features'][0]['center']
 
     workplace = get_geocoords(address)[::-1]
