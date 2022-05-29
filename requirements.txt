@@ -2,3 +2,6 @@ pandas
 numpy
 chart_studio
 haversine
+plotly
+urllib
+requests
