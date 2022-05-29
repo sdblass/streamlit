@@ -56,18 +56,30 @@ with st.form(key='user_info'):
 
     st.write(
     '''
-    ## Enter your hourly wage ($ per hour). 
+    ## Enter your hourly wage ($ per hour)
     This will let us determine how much your time spent commuting is worth to you which we will factor in to the rents.
     ''')
 
     hourly_income = st.number_input('Hourly wage', value=40)
 
     st.write('''
-    ## Enter your anticipated average commuting speed. 
+    ## Enter your anticipated average commuting speed
     The default is 40 mph.
     ''')
 
     speed = st.number_input('Speed', min_value=1, max_value=70, value=40)
+
+    st.write('''
+    ## Select your desired range of rents
+    ''')
+
+    rental_range = st.slider('Range of rents', value=[1500, 3500], min_value=1400, max_value = 4000)
+
+    
+
+    st.write('''
+        Click submit each time you change anything above.
+    ''')
 
     with open('mapbox_key.txt') as f:
         mapbox_access_token = f.read().rstrip()
@@ -143,7 +155,7 @@ if submit_button:
         workplace = urllib.parse.quote(address)
         try: url = f'https://api.mapbox.com/geocoding/v5/mapbox.places/{workplace}.json?access_token={mapbox_access_token}'
         except IndexError:
-            print('Check your address again for typos. The address must be within the immediate DC/MD/VA area.')
+            st.write('Check your address again for typos. The address must be within the immediate DC/MD/VA area.')
             return
         session = requests.session()
         location = session.get(url)
@@ -152,6 +164,7 @@ if submit_button:
     workplace = get_geocoords(address)[::-1]
     results = commute_adjusted_listings(40, workplace, generate_listings())
 
+
     # PART 4 - Show graph of listings
 
     # There is a bug in plotly where if you set the marker style, the color defaults to gray.
@@ -159,7 +172,7 @@ if submit_button:
     # https://github.com/plotly/plotly.js/issues/2813 ('Note that the array `marker.color` and `marker.size`', are only available for *circle* symbols.')
 
     px.set_mapbox_access_token(mapbox_access_token)
-    fig = px.scatter_mapbox(results, lat="lat", lon="long", hover_name="type", hover_data=["rent"],
+    fig = px.scatter_mapbox(results[(results.adjusted_rent <= rental_range[1]) & (results.adjusted_rent >= rental_range[0])], lat="lat", lon="long", hover_name="type", hover_data=["rent"],
                             color="adjusted_rent", zoom=10, height=600)
 
     fig.update_layout(mapbox_style="light")
@@ -185,88 +198,9 @@ if submit_button:
         
         )
     # fig.update_traces(marker_color='red', selector=dict(type='scattermapbox'))
+    # fig.show()
     st.plotly_chart(fig)
 
 
 
-    # st.write(
-    # '''
-    # ### Graphing and Buttons
-    # Let's graph some of our data with matplotlib. We can also add buttons to add interactivity to our app.
-    # '''
-    # )
-
-    # fig, ax = plt.subplots()
-
-    # ax.hist(data['PRICE'])
-    # ax.set_title('Distribution of House Prices in $100,000s')
-
-    # show_graph = st.checkbox('Show Graph', value=True)
-
-    # if show_graph:
-    #     st.pyplot(fig)
-
-
-    # # PART 5 - Mapping and Filtering Data
-
-    # st.write(
-    # '''
-    # ## Mapping and Filtering Data
-    # We can also use Streamlit's built in mapping functionality.
-    # Furthermore, we can use a slider to filter for houses within a particular price range.
-    # '''
-    # )
-
-    # price_input = st.slider('House Price Filter', int(data['PRICE'].min()), int(data['PRICE'].max()), 500000 )
-
-    # price_filter = data['PRICE'] < price_input
-    # st.map(data.loc[price_filter, ['lat', 'lon']])
-
-
-    # # PART 6 - Linear Regression Model
-
-    # st.write(
-    # '''
-    # ## Train a Linear Regression Model
-    # Now let's create a model to predict a house's price from its square footage and number of bedrooms.
-    # '''
-    # ) 
-
-    # from sklearn.linear_model import LinearRegression
-    # from sklearn.model_selection import train_test_split
-
-    # clean_data = data.dropna(subset=['PRICE', 'SQUARE FEET', 'BEDS'])
-
-    # X = clean_data[['SQUARE FEET', 'BEDS']]
-    # y = clean_data['PRICE']
-
-    # X_train, X_test, y_train, y_test = train_test_split(X, y)
-
-    # ## Warning: Using the above code, the R^2 value will continue changing in the app. Remember this file is run upon every update! Set the random_state if you want consistent R^2 results.
-    # X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
-
-    # lr = LinearRegression()
-    # lr.fit(X_train, y_train)
-
-    # st.write(f'Test R²: {lr.score(X_test, y_test):.3f}')
-
-
-    # # PART 7 - Predictions from User Input
-
-    # st.write(
-    # '''
-    # ## Model Predictions
-    # And finally, we can make predictions with our trained model from user input.
-    # '''
-    # )
-
-    # sqft = st.number_input('Square Footage of House', value=2000)
-    # beds = st.number_input('Number of Bedrooms', value=3)
-
-    # input_data = pd.DataFrame({'sqft': [sqft], 'beds': [beds]})
-    # pred = lr.predict(input_data)[0]
-
-    # st.write(
-    # f'Predicted Sales Price of House: ${int(pred):,}'
-    # )
 
