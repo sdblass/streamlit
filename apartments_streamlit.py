@@ -151,7 +151,6 @@ if submit_button:
 
     workplace = get_geocoords(address)[::-1]
     results = commute_adjusted_listings(40, workplace, generate_listings())
-    st.write(workplace)
 
     # PART 4 - Show graph of listings
 
