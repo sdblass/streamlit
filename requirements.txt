@@ -3,5 +3,4 @@ numpy
 chart_studio
 haversine
 plotly
-urllib.parse
 requests
