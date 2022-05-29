@@ -30,7 +30,7 @@ import streamlit as st
 
 ## PART 1 - Intro
 
-st.image('https://github.com/sdblass/streamlit/blob/main/mvp_pipeline.png')
+st.image('mvp_pipeline.png')
 
 st.write('''
 # Let us help you find your next apartment!
