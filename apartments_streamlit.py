@@ -75,10 +75,9 @@ with st.form(key='user_info'):
 
     rental_range = st.slider('Range of rents', value=[1500, 3500], min_value=1400, max_value = 4000)
 
-    apt_types = st.multiselect('Select the types of apartments to search for.', ['Studio', 'One bedroom', 'Two bedrooms'])
+    apt_types = st.multiselect('Select the types of apartments to search for.', ['Studio', 'One bedroom', 'Two bedrooms'], ['Studio', 'One bedroom', 'Two bedrooms'])
     apt_types = [apt.replace('Studio', 'studio').replace('One bedroom', '1_br').replace('Two bedrooms', '2_br') for apt in apt_types]  
-    st.write(apt_types)  
-
+    
     st.write('''
         Click submit each time you change anything above.
     ''')
@@ -90,7 +89,7 @@ with st.form(key='user_info'):
 
 if submit_button:
 # PART 3 - Generate random apartment listings. This will be replaced with real listings in the actual deployment.    
-    
+    # st.write(apt_types)
     def generate_listings(st=1000, one=1000, two=1000): # creates a df of apartment listings and geocoords for studio, 1-br, and 2-br, each with a range of rents
         studio_low = 1500
         one_br_low = 1700
@@ -173,8 +172,13 @@ if submit_button:
     # https://github.com/plotly/plotly.py/issues/2485
     # https://github.com/plotly/plotly.js/issues/2813 ('Note that the array `marker.color` and `marker.size`', are only available for *circle* symbols.')
 
+    results = results[(results.adjusted_rent <= rental_range[1]) & (results.adjusted_rent >= rental_range[0]) & (results.type.isin(apt_types))].sort_values('adjusted_rent')
+    results.adjusted_rent = results.adjusted_rent.astype('int')
+
+    st.dataframe(results.head())
+
     px.set_mapbox_access_token(mapbox_access_token)
-    fig = px.scatter_mapbox(results[(results.adjusted_rent <= rental_range[1]) & (results.adjusted_rent >= rental_range[0]) & (results.type in apt_types)], lat="lat", lon="long", hover_name="type", hover_data=["rent"],
+    fig = px.scatter_mapbox(results, lat="lat", lon="long", hover_name="type", hover_data=["rent"],
                             color="adjusted_rent", zoom=10, height=600)
 
     fig.update_layout(mapbox_style="light")
