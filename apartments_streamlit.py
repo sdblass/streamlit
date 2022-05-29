@@ -30,6 +30,8 @@ import streamlit as st
 
 ## PART 1 - Intro
 
+st.image('https://github.com/sdblass/streamlit/blob/main/mvp_pipeline.png')
+
 st.write('''
 # Let us help you find your next apartment!
 Did you get a new job in the DC/VA/MD area? Are you considering moving closer to work? Will paying more for an apartment closer to work to reduce your commute time actually make sense financially? Let us help you answer that question!
@@ -79,7 +81,7 @@ with st.form(key='user_info'):
     apt_types = [apt.replace('Studio', 'studio').replace('One bedroom', '1_br').replace('Two bedrooms', '2_br') for apt in apt_types]  
     
     st.write('''
-        Click submit each time you change anything above.
+        Note, you must click "Submit" to update the map.
     ''')
 
     with open('mapbox_key.txt') as f:
