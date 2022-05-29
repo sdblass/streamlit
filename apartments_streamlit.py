@@ -186,7 +186,7 @@ if submit_button:
         
         )
     # fig.update_traces(marker_color='red', selector=dict(type='scattermapbox'))
-    fig.show()
+    st.plotly_chart(fig)
 
 
 
