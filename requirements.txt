@@ -1,7 +1,0 @@
-pandas
-numpy
-chart_studio
-haversine
-plotly
-requests
-shapely
