@@ -22,7 +22,7 @@ st.write('''
 # Let us help you find your next apartment!
 Did you get a new job in the DC/VA/MD area? Are you considering moving closer to work? Will paying more for an apartment closer to work to reduce your commute time actually make sense financially? Let us help you answer that question!
 In the fields below, please enter an address for your new job location and we will help you find your next apartment! Be sure to spell everything correctly! Caps are optional.
-In the final version, apartment listings will come from [apartments.com](https://www.apartments.com).
+In the final version, apartment listings will come from a real estate website like [apartments.com](https://www.apartments.com).
 ''')
 
 
@@ -37,8 +37,8 @@ st.write(
 with st.form(key='user_info'):
     street = st.text_input('Street', max_chars=100, value='932 N Kenmore St')
     city = st.text_input('City', max_chars=100, value='Arlington')
-    state = st.text_input('State', max_chars=100, value='VA')
-    zipcode = st.text_input('Zip', max_chars=100, value='22201')
+    state = st.text_input('State', max_chars=2, value='VA')
+    zipcode = st.text_input('Zip', max_chars=5, value='22201')
 
     address = street + ' ' + city + ' ' + state + ' ' + zipcode
 
@@ -130,19 +130,6 @@ if submit_button:
 
         return results
 
-    # Calculate the distances between each point in the df and the user's target location.
-
-    # def dist(point, df): # input [lat, long] and it will return the distance between 'point' and each row in the df
-    #     df['distance'] = df.apply(lambda x: haversine((x.lat, x.long), (point[0], point[1]), unit='mi'), axis=1)
-    #     return df
-
-    # def commute_adjusted_listings(hourly_income, work_loc, df, speed=40): # input $/hr, work location (lat, long), data, average speed
-    #     df = dist(work_loc, df)
-    #     df['commute_time_min'] = df['distance'] / speed * 60 # yields commute time in minutes 
-    #     df['adjusted_rent'] = df['rent'] + df['commute_time_min'] / 60 * hourly_income * 2 * 20 # distance/speed = time * income = dollar value of commute * 2 because commuting is roundtrip * 20 for 20 workdays per month
-    #     return df
-
-
     def get_geocoords(address=address):
         workplace = urllib.parse.quote(address)
         try: url = f'https://api.mapbox.com/geocoding/v5/mapbox.places/{workplace}.json?access_token={mapbox_access_token}'
@@ -154,8 +141,6 @@ if submit_button:
         return location.json()['features'][0]['center']
 
     workplace = get_geocoords(address)[::-1]
-    # results = commute_adjusted_listings(40, workplace, generate_listings())
-
 
     # PART 4 - Show graph of listings
 
@@ -164,7 +149,6 @@ if submit_button:
     # https://github.com/plotly/plotly.js/issues/2813 ('Note that the array `marker.color` and `marker.size`', are only available for *circle* symbols.')
 
     results = generate_listings()
-
 
     def isochrone_layer(mode, minutes, workplace=workplace): # minutes = '10,20,30'
         profile = f'mapbox/{mode}'
@@ -191,10 +175,6 @@ if submit_button:
                                 'type': "fill", 'below': "traces", 'color': f"{colors[i]}", 'opacity': 0.15}]
         return results
 
-
-
-
-    
     # Get the isochrone data
     ten_thirty_layer = isochrone_layer(mode, '10,20,30')
     forty_layer = isochrone_layer(mode, '40')
@@ -202,14 +182,10 @@ if submit_button:
     # There is a bug in plotly where if you set the marker style, the color defaults to gray.
     # https://github.com/plotly/plotly.py/issues/2485
     # https://github.com/plotly/plotly.js/issues/2813 ('Note that the array `marker.color` and `marker.size`', are only available for *circle* symbols.')
-
-   
-    
-    
+  
     # create list of polygons
     polygons = [Polygon(ten_thirty_layer[i]['source']['features'][0]['geometry']['coordinates'][0][0]) for i in range(2, -1, -1)] + [Polygon(forty_layer[0]['source']['features'][0]['geometry']['coordinates'][0][0])]    
-        
-        
+               
     def which_polygon(point, polygons): # returns bool if point in polygon. Will loop through polys from smallest to largest.
         point = Point(point) # create point
         point_found = False
@@ -256,13 +232,13 @@ if submit_button:
     st.plotly_chart(fig) 
 
     st.write('''
-    ## The cheapest apartments for each rental type
+    ## The cheapest apartments for each commute length
     ''')
     st.dataframe(results.sort_values('adjusted_rent').groupby('commute time (minutes)').head(3).reset_index(drop=True))
 
     st.write('''
     ## Future work
-    The final version will use data scraped from a real estate listings site such as [apartments.com](https://www.apartments.com).
+    The final version will use data scraped from a real estate listings site such as [apartments.com](https://www.apartments.com). You will see addresses in the table above instead of latitude and longitude.
     '''
     )
 
