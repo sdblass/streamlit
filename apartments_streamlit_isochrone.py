@@ -70,7 +70,7 @@ with st.form(key='user_info'):
     apt_types = [apt.replace('Studio', 'studio').replace('One bedroom', '1_br').replace('Two bedrooms', '2_br') for apt in apt_types]  
     
     st.write('''
-        Note, you must click "Submit" to create/update the map.
+        Note, you must click "Submit" to create/update the map if you make a change to the search parameters above.
     ''')
 
     with open('mapbox_key.txt') as f:
@@ -200,7 +200,6 @@ if submit_button:
     results['adjusted_rent'] = (results['rent'] + (results['polygon'] +1) * 10 * 2 * 20 /60 * 40).astype('int')
     results = results[(results.adjusted_rent <= rental_range[1]) & (results.adjusted_rent >= rental_range[0]) & (results.type.isin(apt_types))]
     results['commute time (minutes)'] = results.apply(lambda x: '<10' if x.polygon == 0 else '10-20' if x.polygon == 1 else '20-30' if x.polygon == 2 else '30-40' if x.polygon == 3 else '>40', axis=1)
-    results.drop('polygon', axis=1, inplace=True)
 
     px.set_mapbox_access_token(mapbox_access_token)
     fig = px.scatter_mapbox(results, lat="lat", lon="long", hover_name="type", hover_data=["rent"],
@@ -234,7 +233,27 @@ if submit_button:
     st.write('''
     ## The cheapest apartments for each commute length
     ''')
-    st.dataframe(results.sort_values('adjusted_rent').groupby('commute time (minutes)').head(3).reset_index(drop=True))
+    results = results.sort_values('adjusted_rent').groupby('commute time (minutes)').head(3)
+    results.index = results.groupby('polygon').cumcount() + 1
+    results.drop('polygon', axis=1, inplace=True)
+    results = results.reset_index().rename(columns = {'index': 'rank', 'adjusted_rent': 'effective rent'})
+
+    # Reorder columns to put rents next to one another
+    results = results.reindex(columns=['rank', 'rent', 'effective rent', 'lat', 'long', 'type', 'commute time (minutes)'])
+    
+
+    # CSS to inject contained in a string
+    hide_table_row_index = """
+                <style>
+                tbody th {display:none}
+                .blank {display:none}
+                </style>
+                """
+
+    # Inject CSS with Markdown
+    st.markdown(hide_table_row_index, unsafe_allow_html=True)
+
+    st.table(results)
 
     st.write('''
     ## Future work
