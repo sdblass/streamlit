@@ -62,6 +62,7 @@ with st.form(key='user_info'):
 
     st.write('''
     ## Select your desired range of rents
+    The search will increase the rent based on the time required to commute to your set job location.
     ''')
 
     rental_range = st.slider('Range of rents', value=[1500, 3500], min_value=1400, max_value = 4000)
@@ -149,118 +150,128 @@ if submit_button:
     # https://github.com/plotly/plotly.js/issues/2813 ('Note that the array `marker.color` and `marker.size`', are only available for *circle* symbols.')
 
     results = generate_listings()
+    results = results[(results.rent <= rental_range[1]) & (results.rent >= rental_range[0]) & (results.type.isin(apt_types))]
 
-    def isochrone_layer(mode, minutes, workplace=workplace): # minutes = '10,20,30'
-        profile = f'mapbox/{mode}'
-        coordinates = str(workplace[1]) + ',' +  str(workplace[0])
-        contours_minutes = f'contours_minutes={minutes}'
-        r = requests.get(f'https://api.mapbox.com/isochrone/v1/{profile}/{coordinates}?{contours_minutes}&polygons=true&access_token={mapbox_access_token}').json()
-        results = []
-        if minutes == '10,20,30': colors = ['red', 'yellow', 'lime'] # colors go in most to least travel time
-        else: colors = ['purple']
-        length = len(minutes.split(','))
-        for i in range(length):
-            results += [
-        {
-                    'source': {
-                        'type': "FeatureCollection",
-                        'features': [{
-                            'type': "Feature",
-                            'geometry': {
-                                'type': "MultiPolygon",
-                                'coordinates': [r['features'][i]['geometry']['coordinates']]                               
-            }
-                        }]
-                    },
-                                'type': "fill", 'below': "traces", 'color': f"{colors[i]}", 'opacity': 0.15}]
-        return results
+    if not len(results):
+        st.write(''' 
+        ## No listings met your search criteria
+        Consider broadening your criteria.
+        ''')
+    else:
 
-    # Get the isochrone data
-    ten_thirty_layer = isochrone_layer(mode, '10,20,30')
-    forty_layer = isochrone_layer(mode, '40')
+        def isochrone_layer(mode, minutes, workplace=workplace): # minutes = '10,20,30' or '40'
+            profile = f'mapbox/{mode}'
+            coordinates = str(workplace[1]) + ',' +  str(workplace[0])
+            contours_minutes = f'contours_minutes={minutes}'
+            r = requests.get(f'https://api.mapbox.com/isochrone/v1/{profile}/{coordinates}?{contours_minutes}&polygons=true&access_token={mapbox_access_token}').json()
+            results = []
+            if minutes == '10,20,30': colors = ['red', 'yellow', 'lime'] # colors go in most to least travel time
+            else: colors = ['purple']
+            length = len(minutes.split(','))
+            for i in range(length):
+                results += [
+            {
+                        'source': {
+                            'type': "FeatureCollection",
+                            'features': [{
+                                'type': "Feature",
+                                'geometry': {
+                                    'type': "MultiPolygon",
+                                    'coordinates': [r['features'][i]['geometry']['coordinates']]                               
+                }
+                            }]
+                        },
+                                    'type': "fill", 'below': "traces", 'color': f"{colors[i]}", 'opacity': 0.15}]
+            return results
 
-    # There is a bug in plotly where if you set the marker style, the color defaults to gray.
-    # https://github.com/plotly/plotly.py/issues/2485
-    # https://github.com/plotly/plotly.js/issues/2813 ('Note that the array `marker.color` and `marker.size`', are only available for *circle* symbols.')
-  
-    # create list of polygons
-    polygons = [Polygon(ten_thirty_layer[i]['source']['features'][0]['geometry']['coordinates'][0][0]) for i in range(2, -1, -1)] + [Polygon(forty_layer[0]['source']['features'][0]['geometry']['coordinates'][0][0])]    
-               
-    def which_polygon(point, polygons): # returns bool if point in polygon. Will loop through polys from smallest to largest.
-        point = Point(point) # create point
-        point_found = False
-        for i in range(4):
-            if polygons[i].contains(point): # check if polygon contains point
-                point_found = True
-                break
-        if not point_found: return 4
-        else: return i    
+        # Get the isochrone data
+        ten_thirty_layer = isochrone_layer(mode, '10,20,30')
+        forty_layer = isochrone_layer(mode, '40')
 
-    results['polygon'] = results.apply(lambda x: which_polygon([x.long, x.lat], polygons), axis=1)
-    results['adjusted_rent'] = (results['rent'] + (results['polygon'] +1) * 10 * 2 * 20 /60 * 40).astype('int')
-    results = results[(results.adjusted_rent <= rental_range[1]) & (results.adjusted_rent >= rental_range[0]) & (results.type.isin(apt_types))]
-    results['commute time (minutes)'] = results.apply(lambda x: '<10' if x.polygon == 0 else '10-20' if x.polygon == 1 else '20-30' if x.polygon == 2 else '30-40' if x.polygon == 3 else '>40', axis=1)
+        # There is a bug in plotly where if you set the marker style, the color defaults to gray.
+        # https://github.com/plotly/plotly.py/issues/2485
+        # https://github.com/plotly/plotly.js/issues/2813 ('Note that the array `marker.color` and `marker.size`', are only available for *circle* symbols.')
 
-    px.set_mapbox_access_token(mapbox_access_token)
-    fig = px.scatter_mapbox(results, lat="lat", lon="long", hover_name="type", hover_data=["rent"],
-                            color="adjusted_rent", zoom=12, height=600)
+        # create list of polygons
+        polygons = [Polygon(ten_thirty_layer[i]['source']['features'][0]['geometry']['coordinates'][0][0]) for i in range(2, -1, -1)] + [Polygon(forty_layer[0]['source']['features'][0]['geometry']['coordinates'][0][0])]    
+                
+        def which_polygon(point, polygons): # returns bool if point in polygon. Will loop through polys from smallest to largest.
+            point = Point(point) # create point
+            point_found = False
+            for i in range(4):
+                if polygons[i].contains(point): # check if polygon contains point
+                    point_found = True
+                    break
+            if not point_found: return 4
+            else: return i    
+        
+        results['polygon'] = results.apply(lambda x: which_polygon([x.long, x.lat], polygons), axis=1)
+        results['adjusted_rent'] = (results['rent'] + (results['polygon'] +1) * 10 * 2 * 20 /60 * 40).astype('int') # 10 minute increments
 
-    fig.update_layout(mapbox_style="light")
-    fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
 
-    fig.add_trace(go.Scattermapbox(
-            lat=[workplace[0]],
-            lon=[workplace[1]],
-            marker=go.scattermapbox.Marker(
-            size=25,
-            color='red',          
-            ),
-            marker_symbol = 'star',
-            hoverinfo = 'none',
-            showlegend = False
-            )  
+        results['commute time (minutes)'] = results.apply(lambda x: '<10' if x.polygon == 0 else '10-20' if x.polygon == 1 else '20-30' if x.polygon == 2 else '30-40' if x.polygon == 3 else '>40', axis=1)
+
+        px.set_mapbox_access_token(mapbox_access_token)
+        fig = px.scatter_mapbox(results, lat="lat", lon="long", hover_name="type", hover_data=["rent"],
+                                color="adjusted_rent", zoom=12, height=600)
+
+        fig.update_layout(mapbox_style="light")
+        fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+
+        fig.add_trace(go.Scattermapbox(
+                lat=[workplace[0]],
+                lon=[workplace[1]],
+                marker=go.scattermapbox.Marker(
+                size=25,
+                color='red',          
+                ),
+                marker_symbol = 'star',
+                hoverinfo = 'none',
+                showlegend = False
+                )  
+            )
+        fig.update_layout(
+            mapbox = {
+                'style': "light",
+                'center': { 'lon': workplace[1], 'lat': workplace[0]},
+                'zoom': 12, 'layers': ten_thirty_layer + forty_layer
+            },
+            margin = {'l':0, 'r':0, 'b':0, 't':0})
+
+        st.plotly_chart(fig) 
+
+        st.write('''
+        ## The cheapest apartments for each commute length
+        ''')
+        results = results.sort_values('adjusted_rent').groupby('commute time (minutes)').head(3)
+        results.index = results.groupby('polygon').cumcount() + 1
+        results.drop('polygon', axis=1, inplace=True)
+        results = results.reset_index().rename(columns = {'index': 'rank', 'adjusted_rent': 'effective rent'})
+
+        # Reorder columns to put rents next to one another
+        results = results.reindex(columns=['rank', 'rent', 'effective rent', 'lat', 'long', 'type', 'commute time (minutes)'])
+        
+
+        # CSS to inject contained in a string
+        hide_table_row_index = """
+                    <style>
+                    tbody th {display:none}
+                    .blank {display:none}
+                    </style>
+                    """
+
+        # Inject CSS with Markdown
+        st.markdown(hide_table_row_index, unsafe_allow_html=True)
+
+        st.table(results)
+
+        st.write('''
+        ## Future work
+        The final version will use data scraped from a real estate listings site such as [apartments.com](https://www.apartments.com). You will see addresses in the table above instead of latitude and longitude.
+        '''
         )
-    fig.update_layout(
-        mapbox = {
-            'style': "light",
-            'center': { 'lon': workplace[1], 'lat': workplace[0]},
-            'zoom': 12, 'layers': ten_thirty_layer + forty_layer
-        },
-        margin = {'l':0, 'r':0, 'b':0, 't':0})
-
-    st.plotly_chart(fig) 
-
-    st.write('''
-    ## The cheapest apartments for each commute length
-    ''')
-    results = results.sort_values('adjusted_rent').groupby('commute time (minutes)').head(3)
-    results.index = results.groupby('polygon').cumcount() + 1
-    results.drop('polygon', axis=1, inplace=True)
-    results = results.reset_index().rename(columns = {'index': 'rank', 'adjusted_rent': 'effective rent'})
-
-    # Reorder columns to put rents next to one another
-    results = results.reindex(columns=['rank', 'rent', 'effective rent', 'lat', 'long', 'type', 'commute time (minutes)'])
-    
-
-    # CSS to inject contained in a string
-    hide_table_row_index = """
-                <style>
-                tbody th {display:none}
-                .blank {display:none}
-                </style>
-                """
-
-    # Inject CSS with Markdown
-    st.markdown(hide_table_row_index, unsafe_allow_html=True)
-
-    st.table(results)
-
-    st.write('''
-    ## Future work
-    The final version will use data scraped from a real estate listings site such as [apartments.com](https://www.apartments.com). You will see addresses in the table above instead of latitude and longitude.
-    '''
-    )
 
 
 
 
+            
