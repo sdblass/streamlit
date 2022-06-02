@@ -37,10 +37,10 @@ st.write(
 ''')
 
 with st.form(key='user_info'):
-    street = st.text_input('Street', max_chars=100, value='932 N Kenmore St')
-    city = st.text_input('City', max_chars=100, value='Arlington')
-    state = st.text_input('State', max_chars=2, value='VA')
-    zipcode = st.text_input('Zip', max_chars=5, value='22201')
+    street = st.text_input('Street', max_chars=100)#, value='932 N Kenmore St')
+    city = st.text_input('City', max_chars=100)#, value='Arlington')
+    state = st.text_input('State', max_chars=2)#, value='VA')
+    zipcode = st.text_input('Zip', max_chars=5)#, value='22201')
 
     address = street + ' ' + city + ' ' + state + ' ' + zipcode
 
