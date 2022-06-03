@@ -218,9 +218,7 @@ if submit_button:
 
         st.plotly_chart(fig) 
 
-        st.write('''
-        ## The cheapest apartments for each commute length
-        ''')
+       
         results = results.sort_values('adjusted_rent').groupby('commute time (minutes)').head(3)
         results.index = results.groupby('zone').cumcount() + 1
         results.drop('zone', axis=1, inplace=True)
@@ -228,7 +226,45 @@ if submit_button:
 
         # Reorder columns to put rents next to one another
         results = results.reindex(columns=['rank', 'rent', 'effective rent', 'lat', 'long', 'type', 'commute time (minutes)'])
-        
+
+        opacity = 0.15
+        color_conv = {'red': f'rgba(255,0,0,{opacity})', 'blue': f'rgba(0,0,255,{opacity})', 'green': f'rgba(0,128,0,{opacity})', 
+                    'yellow': f'rgba(255,255,0,{opacity})', 'grey': f'rgb(240, 240, 240, {opacity})'}
+        time_conv = {'green': '<10', 'yellow': '10-20', 'red': '20-30', 'blue': '30-40', 'grey': '>40'}
+
+        s='''
+            green, yellow, red, blue, grey
+            '''
+        li=s.split(',')
+        li=[l.replace('\n','') for l in li]
+        li=[l.replace(' ','') for l in li]
+
+        # import pandas as pd
+        # import plotly.graph_objects as go
+
+        df=pd.DataFrame.from_dict({'colour': li})
+        df['rgba'] = df.colour.map(color_conv)
+        df['time'] = df.colour.map(time_conv)
+
+        color_fig = go.Figure(data=[go.Table(
+        header=dict(
+            values=["Commute times (minutes)"],
+            line_color='black', fill_color='white',
+            align='center', font=dict(color='black', size=14)
+        ),
+        cells=dict(
+            values=[df.time],
+            line_color=['black'], fill_color=[df.rgba],
+            align='center', font=dict(color='black', size=11)
+        ))
+        ])
+        color_fig.update_layout(width=400, height=240, margin=dict(t=0, b=0, pad=0))
+        st.plotly_chart(color_fig)
+
+        st.write('''
+                ## The cheapest apartments for each commute length
+                ''')
+                
 
         # CSS to inject contained in a string
         hide_table_row_index = """
