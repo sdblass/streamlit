@@ -15,6 +15,8 @@ import requests, math, random
 import streamlit as st
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
+from sqlalchemy import create_engine
+
 
 
 ## PART 1 - Intro
@@ -24,7 +26,7 @@ st.write('''
 Did you get a new job? Are you considering moving closer to work? Will paying more for an apartment closer to work to reduce your commute time actually make sense financially? Let us help you answer that question!
 In the fields below, enter an address for your new job location and we will locate apartments in that area categorized by commute time. Be sure to spell everything correctly! The form is case-insensitive.
 
-Note, this version is a proof-of-concept using randomly generated rental listings. The final version will use actual listings from a real estate website like [apartments.com](https://www.apartments.com).
+Note, this version is a proof-of-concept using a combination of real and randomly generated rental listings for the Arlington, VA area. The final version will use actual listings from a real estate website like [apartments.com](https://www.apartments.com) for any area.
 ''')
 
 
@@ -37,10 +39,10 @@ st.write(
 ''')
 
 with st.form(key='user_info'):
-    street = st.text_input('Street', max_chars=100)#, value='932 N Kenmore St')
-    city = st.text_input('City', max_chars=100)#, value='Arlington')
-    state = st.text_input('State', max_chars=2)#, value='VA')
-    zipcode = st.text_input('Zip', max_chars=5)#, value='22201')
+    street = st.text_input('Street', max_chars=100, value='932 N Kenmore St')
+    city = st.text_input('City', max_chars=100, value='Arlington')
+    state = st.text_input('State', max_chars=2, value='VA')
+    zipcode = st.text_input('Zip', max_chars=5, value='22201')
 
     address = street + ' ' + city + ' ' + state + ' ' + zipcode
 
@@ -84,27 +86,35 @@ with st.form(key='user_info'):
 if submit_button:
 # PART 3 - Generate random apartment listings. This will be replaced with real listings in the actual deployment.    
     # st.write(apt_types)
-    def generate_map_data(workplace, distance, num_points=5000):
-        def rent_gen(kind):
-            studio_low = 1500
-            one_br_low = 1700
-            two_br_low = 2200
-            high = 1000
-            if kind == 'studio':
-             return np.random.randint(studio_low, studio_low + high + 1)
-            elif kind == '1_br': 
-             return np.random.randint(one_br_low, one_br_low + high + 1)
-            else:
-             return np.random.randint(two_br_low, two_br_low + high + 1)
+    # def generate_map_data(workplace, distance, num_points=5000):
+    #     def rent_gen(kind):
+    #         studio_low = 1500
+    #         one_br_low = 1700
+    #         two_br_low = 2200
+    #         high = 1000
+    #         if kind == 'studio':
+    #          return np.random.randint(studio_low, studio_low + high + 1)
+    #         elif kind == '1_br': 
+    #          return np.random.randint(one_br_low, one_br_low + high + 1)
+    #         else:
+    #          return np.random.randint(two_br_low, two_br_low + high + 1)
 
-        map_data = [inverse_haversine(workplace, distance*math.sqrt(random.random()), random.random()*2*math.pi, unit=Unit.MILES) for _ in range(num_points)]
-        map_data = pd.DataFrame(map_data, columns=['lat', 'long'])
-        map_data['type'] = [random.choice(['studio', '1_br', '2_br']) for _ in range(map_data.shape[0])]
+    #     map_data = [inverse_haversine(workplace, distance*math.sqrt(random.random()), random.random()*2*math.pi, unit=Unit.MILES) for _ in range(num_points)]
+    #     map_data = pd.DataFrame(map_data, columns=['lat', 'long'])
+    #     map_data['type'] = [random.choice(['studio', '1_br', '2_br']) for _ in range(map_data.shape[0])]
 
 
-        map_data['rent'] = map_data['type'].apply(lambda x: rent_gen(x))
+    #     map_data['rent'] = map_data['type'].apply(lambda x: rent_gen(x))
 
-        return map_data
+    #     return map_data
+
+    def get_map_data():
+        engine = create_engine('sqlite:///address_data_sql.db')
+        # read in random apartment data plus real data
+
+        return pd.read_sql('SELECT * FROM address_data_sql;', engine)
+
+
 
     def get_geocoords(address=address):
         workplace = urllib.parse.quote(address)
@@ -124,7 +134,7 @@ if submit_button:
     # https://github.com/plotly/plotly.py/issues/2485
     # https://github.com/plotly/plotly.js/issues/2813 ('Note that the array `marker.color` and `marker.size`', are only available for *circle* symbols.')
 
-    results = generate_map_data(workplace, 25, 5000)
+    results = get_map_data()
     results = results[(results.rent <= rental_range[1]) & (results.rent >= rental_range[0]) & (results.type.isin(apt_types))]
 
     if not len(results):
@@ -184,11 +194,13 @@ if submit_button:
 # There is a bug in plotly where if you set the marker style, the color defaults to gray.
 # https://github.com/plotly/plotly.py/issues/2485
 # https://github.com/plotly/plotly.js/issues/2813 ('Note that the array `marker.color` and `marker.size`', are only available for *circle* symbols.')
+# https://stackoverflow.com/questions/59628536/option-symbol-in-scattermapbox-is-not-working
+# https://plotly.com/python/reference/scattermapbox/ Sets the marker symbol. Full list: https://www.mapbox.com/maki-icons/ Note that the array `marker.color` and `marker.size` are only available for "circle" symbols.
 
         results.rename(columns={'polygon':'zone'}, inplace=True)
 
         px.set_mapbox_access_token(mapbox_access_token)
-        fig = px.scatter_mapbox(results, lat="lat", lon="long", hover_name="type", hover_data=["rent", "zone"],
+        fig = px.scatter_mapbox(results, lat="lat", lon="long", hover_name="type", hover_data=["rent", "zone", "random_real"],
                                 color="adjusted_rent", zoom=12, height=600)
 
         fig.update_layout(mapbox_style="light")
@@ -206,7 +218,7 @@ if submit_button:
                 showlegend = False
                 )  
             )
-
+        fig.add_trace()
 
         fig.update_layout(
             mapbox = {
