@@ -274,7 +274,7 @@ if submit_button:
         st.plotly_chart(color_fig)
 
         st.write('''
-                ## The cheapest apartments for each commute length
+                ## The three cheapest apartments for each commute length
                 ''')
                 
 
