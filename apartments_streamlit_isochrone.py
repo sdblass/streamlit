@@ -218,7 +218,6 @@ if submit_button:
                 showlegend = False
                 )  
             )
-        fig.add_trace()
 
         fig.update_layout(
             mapbox = {
