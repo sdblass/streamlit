@@ -234,9 +234,10 @@ if submit_button:
         results.index = results.groupby('zone').cumcount() + 1
         results.drop('zone', axis=1, inplace=True)
         results = results.reset_index().rename(columns = {'index': 'rank', 'adjusted_rent': 'effective rent'})
+        results.drop('rank', axis=1, inplace=True)
 
         # Reorder columns to put rents next to one another
-        results = results.reindex(columns=['rank', 'rent', 'effective rent', 'lat', 'long', 'type', 'commute time (minutes)'])
+        results = results.reindex(columns=['rent', 'effective rent', 'lat', 'long', 'random_real', 'type', 'commute time (minutes)'])
 
         opacity = 0.15
         color_conv = {'red': f'rgba(255,0,0,{opacity})', 'blue': f'rgba(0,0,255,{opacity})', 'green': f'rgba(0,128,0,{opacity})', 
