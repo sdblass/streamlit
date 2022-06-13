@@ -3,7 +3,7 @@
 The objective of this project is to create a webapp that allows a user searching for apartment rentals to retrieve a list of options that accounts for the user’s commute time. The further the user must travel to work, the more time the user must spend on the road. That commute is time not spent generating income and must be accounted for in the rent. This tool would allow a user to retrieve listings for apartment rentals with the rent adjusted for the commuting time to work. 
 
 ## Data Pipeline
-
+![](https://github.com/sdblass/streamlit/blob/main/images/final_pipeline.png)
 ### Deployment
 The pipeline is [hosted on streamlit](https://share.streamlit.io/sdblass/streamlit/main/apartments_streamlit_isochrone.py). The prototype only contains data for the Arlington, VA area but the user can input any address in the US. Future version will work anywhere in the US.
 
@@ -24,6 +24,8 @@ The new rent is the old rent plus roundtrip time spent commuting in hours per mo
 The pipeline plots each apartment on a map overlaid with polygons containing commuting information. The user can hover over any point to see the rent and type of apartment. The map will also display the commute length and whether the data is a real data point or a randomly generated one.
 
 The pipeline then finds the lowest-rent apartments for each commuting length and lists the top three cheapest ones in a table. Low-rent apartments far from the user's address show a correspondingly higher adjusted rent.
+
+![](https://github.com/sdblass/streamlit/blob/main/images/visual.png)
 
 
 ## Tools
